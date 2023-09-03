@@ -1,0 +1,17 @@
+{
+	"name": "2_explore_calendar",
+	"properties": {
+		"content": {
+			"query": "USE nyc_taxi_discovery;\n\nselect * FROM\nOPENROWSET(\n    BULK 'abfss://nyc-taxi-data@synapsecoursegopidl.dfs.core.windows.net/raw/calendar.csv',\n    FORMAT = 'csv',\n    PARSER_VERSION = '2.0',\n    HEADER_ROW = TRUE\n)AS [result]; \n\n\n--check data types\nEXEC sp_describe_first_result_set N'select * FROM\nOPENROWSET(\n    BULK ''abfss://nyc-taxi-data@synapsecoursegopidl.dfs.core.windows.net/raw/calendar.csv'',\n    FORMAT = ''csv'',\n    PARSER_VERSION = ''2.0'',\n    HEADER_ROW = TRUE\n) AS [result]'\n\n\n--check the max length of columns\nselect \nMAX(LEN(day_name)) as len_day_name,\nMAX(LEN(month_name)) as len_month_name\nFROM\nOPENROWSET(\n    BULK 'abfss://nyc-taxi-data@synapsecoursegopidl.dfs.core.windows.net/raw/calendar.csv',\n    FORMAT = 'csv',\n    PARSER_VERSION = '2.0',\n    HEADER_ROW = TRUE\n) as [result];\n\n\n--with column names provided\nselect * FROM\nOPENROWSET(\n    BULK 'calendar.csv',\n    DATA_SOURCE = 'nyc_taxi_data_raw',\n    FORMAT = 'csv',\n    PARSER_VERSION = '2.0',\n    HEADER_ROW = TRUE\n)\nWITH (\n    date_key  BIGINT 1,\n    date DATE 2,\n    year  BIGINT 3,\n    month  BIGINT 4,\n    day  BIGINT 5,\n    day_name  VARCHAR(10) 6,\n    day_of_year  BIGINT 7,\n    month_of_year  BIGINT 8,\n    week_of_year  BIGINT 9,\n    month_name  VARCHAR(10) 10,\n    year_month  BIGINT 11,\n    year_week  BIGINT 12\n)AS [result];\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_discovery",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
