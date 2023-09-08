@@ -211,7 +211,7 @@
 					"name": "nyc_taxi/discovery"
 				},
 				"content": {
-					"query": "use nyc_taxi_discovery;\n\nSELECT \nCAST(JSON_VALUE(jsonDoc,'$.payment_type') AS SMALLINT) payment_type,\nCAST(JSON_VALUE(jsonDOc,'$.payment_type_desc') AS VARCHAR(15)) payment_type_desc\nFROM \nOPENROWSET(\n    BULK 'payment_type.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0a'\n)\nWITH\n(\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type;\n\n\nEXEC sp_describe_first_result_set N'SELECT \nCAST(JSON_VALUE(jsonDoc,''$.payment_type'') AS SMALLINT) payment_type,\nCAST(JSON_VALUE(jsonDOc,''$.payment_type_desc'') AS VARCHAR(15)) payment_type_desc\nFROM \nOPENROWSET(\n    BULK ''payment_type.json'',\n    DATA_SOURCE=''nyc_taxi_data_raw'',\n    FORMAT=''CSV'',\n    PARSER_VERSION=''1.0'',\n    FIELDTERMINATOR = ''0x0b'',\n    FIELDQUOTE = ''0x0b'',\n    ROWTERMINATOR = ''0x0a''\n)\nWITH\n(\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type\n';\n\n\n\nSELECT \npayment_type,description FROM \nOPENROWSET(\n    BULK 'payment_type.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0a'\n)\nWITH (\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type\nCROSS APPLY OPENJSON(jsonDoc)\nWITH\n(    payment_type SMALLINT,\n    description VARCHAR(20) '$.payment_type_desc'\n);\n\n",
+					"query": "use nyc_taxi_discovery;\n\nSELECT \nCAST(JSON_VALUE(jsonDoc,'$.payment_type') AS SMALLINT) payment_type,\nCAST(JSON_VALUE(jsonDOc,'$.payment_type_desc') AS VARCHAR(15)) payment_type_desc\nFROM \nOPENROWSET(\n    BULK 'payment_type.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b', -- vertical tab 0x0b hex value\n    ROWTERMINATOR = '0x0a' --new line 0x0a hex value\n)\nWITH\n(\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type;\n\n\nEXEC sp_describe_first_result_set N'SELECT \nCAST(JSON_VALUE(jsonDoc,''$.payment_type'') AS SMALLINT) payment_type,\nCAST(JSON_VALUE(jsonDOc,''$.payment_type_desc'') AS VARCHAR(15)) payment_type_desc\nFROM \nOPENROWSET(\n    BULK ''payment_type.json'',\n    DATA_SOURCE=''nyc_taxi_data_raw'',\n    FORMAT=''CSV'',\n    PARSER_VERSION=''1.0'',\n    FIELDTERMINATOR = ''0x0b'',\n    FIELDQUOTE = ''0x0b'',\n    ROWTERMINATOR = ''0x0a''\n)\nWITH\n(\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type\n';\n\n--read json file using open json\n\nSELECT \npayment_type,description FROM \nOPENROWSET(\n    BULK 'payment_type.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0a'\n)\nWITH (\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type\nCROSS APPLY OPENJSON(jsonDoc)\nWITH\n(    payment_type SMALLINT,\n    description VARCHAR(20) '$.payment_type_desc'\n);\n\n\n--array inside json\n\nSELECT \nCAST(JSON_VALUE(jsonDoc,'$.payment_type') AS SMALLINT) payment_type,\nCAST(JSON_VALUE(jsonDOc,'$.payment_type_desc[0].value') AS VARCHAR(15)) payment_type_desc_0,\nCAST(JSON_VALUE(jsonDOc,'$.payment_type_desc[1].value') AS VARCHAR(15)) payment_type_desc_1\nFROM \nOPENROWSET(\n    BULK 'payment_type_array.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0a'\n)\nWITH\n(\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type;\n\n\n--array inside json using openjson\n\nSELECT payment_type,payment_type_desc_value\nFROM \nOPENROWSET(\n    BULK 'payment_type_array.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0a'\n)\nWITH\n(\n    jsonDoc NVARCHAR(MAX)\n) AS payment_type\nCROSS APPLY OPENJSON(jsonDoc)\nWITH(\n    payment_type SMALLINT,\n    payment_type_desc NVARCHAR(MAX) AS JSON\n)\nCROSS APPLY OPENJSON(payment_type_desc)\nWITH(\n    sub_type SMALLINT,\n    payment_type_desc_value VARCHAR(20) '$.value'\n);\n",
 					"metadata": {
 						"language": "sql"
 					},
@@ -309,6 +309,49 @@
 					},
 					"currentConnection": {
 						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/6_explore_rate_code')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc_taxi/discovery"
+				},
+				"content": {
+					"query": "use nyc_taxi_discovery;\n\nSELECT \nrate_code_id,rate_code FROM \nOPENROWSET(\n    BULK 'rate_code.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0b' --vertical tab\n)\nWITH (\n    jsonDoc NVARCHAR(MAX)\n) AS rate_code\nCROSS APPLY OPENJSON(jsonDoc)\nWITH\n(    rate_code_id TINYINT,\n    rate_code VARCHAR(20)\n);\n\n\nSELECT \nrate_code_id,rate_code FROM \nOPENROWSET(\n    BULK 'rate_code_multi_line.json',\n    DATA_SOURCE='nyc_taxi_data_raw',\n    FORMAT='CSV',\n    PARSER_VERSION='1.0',\n    FIELDTERMINATOR = '0x0b',\n    FIELDQUOTE = '0x0b',\n    ROWTERMINATOR = '0x0b' --vertical tab\n)\nWITH (\n    jsonDoc NVARCHAR(MAX)\n) AS rate_code\nCROSS APPLY OPENJSON(jsonDoc)\nWITH\n(    rate_code_id TINYINT,\n    rate_code VARCHAR(20)\n);",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/7_explore_tripdata_green_csv')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "use nyc_taxi_discovery;\n\n-- This is auto-generated code\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/month=01/green_tripdata_2020-01.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result];\n\n\n--select data from a folder\n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/month=01/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\n\n\n    --select data from sub folders\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\n\n--Get data form more than one file\nSELECT\n    TOP 100\nFROM\n    OPENROWSET(\n        BULK('trip_data_green_csv/year=2020/month=01/*.csv',\n              'trip_data_green_csv/year=2020/month=03/*.csv'\n              ),\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\n\n\n--use more than one wild card\n\n\n--file metadata function filename()\nSELECT\n    TOP 100\n    result.filename() as file_name,\n    result.*\nFROM\n    OPENROWSET(\n        BULK('trip_data_green_csv/year=2020/month=01/*.csv',\n              'trip_data_green_csv/year=2020/month=03/*.csv'\n              ),\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\n\n-- record count by each file name\n\nSELECT result.filename() as file_name,\n    count(1) as record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\nGROUP BY result.filename()\nORDER BY result.filename();\n\n\n--List the data using filename()\n\nSELECT result.filename() as file_name,\n    count(1) as record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\nWHERE result.filename() in ('green_tripdata_2020-01.csv','green_tripdata_2020-11.csv')\nGROUP BY result.filename()\nORDER BY result.filename();\n\n\n\n\n--use filepath\nSELECT result.filename() as file_name,\n       result.filepath() as file_path,\n       result.filepath(1) as year,\n       result.filepath(2) as month,\n    count(1) as record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\nWHERE result.filename() in ('green_tripdata_2020-01.csv','green_tripdata_2020-11.csv')\nGROUP BY result.filename(),result.filepath(),result.filepath(1),result.filepath(2)\nORDER BY result.filename();\n\n\n\n--use file path in where clause\nSELECT result.filename() as file_name,\n       result.filepath(1) as year,\n       result.filepath(2) as month,\n       count(1) as record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW=TRUE\n    ) AS [result]\nWHERE result.filepath(1) = '2020' \n   AND result.filepath(2) in ('06','07','08')\nGROUP BY result.filename(),result.filepath(1),result.filepath(2)\nORDER BY result.filename(),result.filepath(1),result.filepath(2);",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
 						"poolName": "Built-in"
 					},
 					"resultLimit": 5000
