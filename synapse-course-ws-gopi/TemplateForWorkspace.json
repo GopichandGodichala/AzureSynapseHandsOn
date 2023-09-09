@@ -111,6 +111,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/10_check_for_duplicates')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc_taxi/discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n\n--Fix Column Names\nSELECT\nlocation_id,\ncount(1) as number_of_records\nFROM\n    OPENROWSET(\n        BULK 'abfss://nyc-taxi-data@synapsecoursegopidl.dfs.core.windows.net/raw/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2\n    ) \n    WITH (\n        location_id SMALLINT 1,\n        borough VARCHAR(15) 2,\n        zone VARCHAR(50) 3,\n        service_zone VARCHAR(15) 4\n        )AS [result]\nGROUP BY location_id\nHAVING count(1) > 1\nORDER BY location_id;\n\n\n\nSELECT\nborough,\ncount(1) as number_of_records\nFROM\n    OPENROWSET(\n        BULK 'abfss://nyc-taxi-data@synapsecoursegopidl.dfs.core.windows.net/raw/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2\n    ) \n    WITH (\n        location_id SMALLINT 1,\n        borough VARCHAR(15) 2,\n        zone VARCHAR(50) 3,\n        service_zone VARCHAR(15) 4\n        )AS [result]\nGROUP BY borough\nHAVING count(1) > 1\nORDER BY borough;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/1_explore_taxi_zone')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -404,6 +427,23 @@
 						"poolName": "Built-in"
 					},
 					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/11')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc_taxi/discovery"
+				},
+				"content": {
+					"metadata": {
+						"language": "sql"
+					}
 				},
 				"type": "SqlQuery"
 			},
